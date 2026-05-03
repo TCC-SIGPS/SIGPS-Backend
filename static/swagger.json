@@ -1,0 +1,143 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "SIGPS API Documentation",
+    "description": "Documentação das rotas do Sistema de Gestão (SIGPS).",
+    "version": "1.0.0"
+  },
+  "host": "localhost:5000",
+  "basePath": "/",
+  "schemes": ["http"],
+  "securityDefinitions": {
+    "Bearer": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "Digite: Bearer {seu_token}"
+    }
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "CADASTRO DE NOVOS USUÁRIOS",
+        "description": "Rota para criar novos usuários. O campo 'perfil' define o nível de acesso.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "nome": { "type": "string", "example": "Felipe Silva" },
+                "email": { "type": "string", "example": "felipe@email.com" },
+                "password": { "type": "string", "example": "123456@" },
+                "perfil": { "type": "string", "example": "Paciente" }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": { "description": "Usuário cadastrado com sucesso!" },
+          "400": { "description": "E-mail já cadastrado" }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "AUTENTICAÇÃO (LOGIN)",
+        "description": "Gera os tokens de acesso e refresh para o usuário.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": { "type": "string", "example": "felipe@email.com" },
+                "password": { "type": "string", "example": "123456@" }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Login realizado com sucesso" },
+          "401": { "description": "E-mail ou senha inválidos" }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": ["Autenticação"],
+        "summary": "RETORNA O PERFIL DO USUÁRIO LOGADO",
+        "description": "Essencial para o controle de acesso no frontend.",
+        "security": [{ "Bearer": [] }],
+        "responses": {
+          "200": { "description": "Dados do perfil retornados" },
+          "401": { "description": "Token inválido ou expirado" }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "RENOVA O TOKEN DE ACESSO",
+        "security": [{ "Bearer": [] }],
+        "responses": {
+          "200": { "description": "Novo token gerado" }
+        }
+      }
+    },
+    "/api/v1/pacientes": {
+      "get": {
+        "tags": ["Pacientes"],
+        "summary": "LISTA TODOS OS PACIENTES",
+        "security": [{ "Bearer": [] }],
+        "responses": {
+          "200": { "description": "Lista de pacientes retornada" }
+        }
+      }
+    },
+    "/api/v1/fila": {
+      "get": {
+        "tags": ["Fila de Prioridade"],
+        "summary": "VISUALIZA A FILA DO SIGPS",
+        "description": "Retorna a fila organizada pelo algoritmo de prioridade.",
+        "responses": {
+          "200": { "description": "Fila retornada com sucesso" }
+        }
+      }
+    },
+    "/api/v1/exames/upload": {
+      "post": {
+        "tags": ["Exames"],
+        "summary": "UPLOAD DE EXAMES",
+        "description": "Permite o envio de arquivos até 16MB.",
+        "security": [{ "Bearer": [] }],
+        "consumes": ["multipart/form-data"],
+        "parameters": [
+          {
+            "name": "file",
+            "in": "formData",
+            "type": "file",
+            "required": true,
+            "description": "Arquivo PDF ou imagem do exame"
+          },
+          {
+            "name": "paciente_id",
+            "in": "formData",
+            "type": "integer",
+            "required": true,
+            "description": "ID do paciente dono do exame"
+          }
+        ],
+        "responses": {
+          "201": { "description": "Upload realizado com sucesso" }
+        }
+      }
+    }
+  }
+} 
