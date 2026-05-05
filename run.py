@@ -8,6 +8,9 @@ from app.exames import bp_exames as exames_blueprint
 from app.models import db
 from app.auth import auth as auth_blueprint
 from app.pacientes import bp_paciente as paciente_blueprint
+from app.chat import bp_chat as chat_blueprint
+from app.agendas import bp_agendas as agendas_blueprint
+from app.admin import bp_admin as admin_blueprint
 
 app = Flask(__name__)
 
@@ -39,7 +42,9 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 
 #Configurações de Banco de Dados e JWT
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456%40@localhost/sigps_db'
+import os
+basedir = os.path.abspath(os.path.dirname(__name__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'sigps_db.sqlite')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = 'super-secret-key' 
 
@@ -57,6 +62,9 @@ app.register_blueprint(auth_blueprint)
 app.register_blueprint(paciente_blueprint)
 app.register_blueprint(exames_blueprint)
 app.register_blueprint(fila_blueprint)
+app.register_blueprint(chat_blueprint)
+app.register_blueprint(agendas_blueprint)
+app.register_blueprint(admin_blueprint)
 
 #Cria as tabelas automaticamente
 with app.app_context():
