@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: sigps-backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      # Protege os diretórios do container de serem sobrescritos pelo volume do host
+      - /app/.venv
+      - /app/__pycache__
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1
+      # A linha abaixo pode ser descomentada se quiser usar um SQLite e garantir o caminho
+      # - DATABASE_URL=sqlite:////app/sigps_db.sqlite
+    # Comando para recarregar com as alterações em tempo real em dev
+    command: flask run --host=0.0.0.0 --port=5000 --reload
+    restart: unless-stopped
