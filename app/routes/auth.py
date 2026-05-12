@@ -64,7 +64,13 @@ def login():
             "id": usuario.id,
             "nome": usuario.nome,
             "email": usuario.email,
-            "perfil": usuario.perfil
+            "perfil": usuario.perfil,
+            "especialidade": usuario.especialidade,
+            "crm": usuario.crm,
+            "foto": usuario.foto,
+            "sobre": usuario.sobre,
+            "uf": usuario.uf,
+            "localAtendimento": usuario.local_atendimento
         }
     }), 200
 
@@ -82,7 +88,12 @@ def get_me():
         "id": usuario.id,
         "nome": usuario.nome,
         "email": usuario.email,
-        "perfil": usuario.perfil # Crucial para o controle de acesso no Angular[cite: 1]
+        "perfil": usuario.perfil,
+        "especialidade": usuario.especialidade,
+        "crm": usuario.crm,
+        "foto": usuario.foto,
+        "sobre": usuario.sobre,
+        "uf": usuario.uf
     }), 200
 
 # 4. RENOVA O TOKEN DE ACESSO (POST /api/v1/auth/refresh)[cite: 1]

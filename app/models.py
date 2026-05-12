@@ -1,17 +1,31 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
-db = SQLAlchemy()
+from app.extensions import db
 
 class User(db.Model):
     __tablename__ = 'users'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     senha = db.Column(db.String(255), nullable=False)
     # Perfis: Paciente, Visualizador, Gestor, Especialista, Admin
     perfil = db.Column(db.String(20), default='Paciente', nullable=False)
+
+    # Campos adicionais para Especialistas
+    especialidade = db.Column(db.String(100), nullable=True)
+    tipo_profissional = db.Column(db.String(50), nullable=True)   # Médico, Dentista, Enfermeiro...
+    conselho_tipo = db.Column(db.String(10), nullable=True)       # CRM, CRO, COREN, CRP...
+    numero_registro = db.Column(db.String(30), nullable=True)     # Número sem UF
+    crm = db.Column(db.String(30), nullable=True)                 # Mantido por compat. (conselho_tipo + numero)
+    foto = db.Column(db.String(500), nullable=True)
+    sobre = db.Column(db.Text, nullable=True)
+    uf = db.Column(db.String(2), nullable=True)
+    local_atendimento = db.Column(db.String(300), nullable=True)
+    # Verificação profissional
+    status_verificacao = db.Column(db.String(20), default='nao_verificado', nullable=True)
+    documento_verificacao = db.Column(db.String(500), nullable=True)
 
     def set_password(self, password):
         self.senha = generate_password_hash(password)
@@ -92,6 +106,50 @@ class ChatMessage(db.Model):
     receiver = db.relationship('User', foreign_keys=[receiver_id])
 
 # --- NOVO MODELO PARA AGENDA ---
+class Clinica(db.Model):
+    __tablename__ = 'clinicas'
+
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(200), nullable=False)
+    tipo = db.Column(db.String(50), default='Clínica')           # Clínica, Consultório, Hospital, UBS...
+    cnpj = db.Column(db.String(18), unique=True)
+    telefone = db.Column(db.String(20))
+    email_contato = db.Column(db.String(100))
+    # Endereço estruturado
+    cep = db.Column(db.String(9))
+    rua = db.Column(db.String(200))
+    numero = db.Column(db.String(10))
+    complemento = db.Column(db.String(100))
+    bairro = db.Column(db.String(100))
+    cidade = db.Column(db.String(100))
+    estado = db.Column(db.String(2))
+    # Campo legado mantido para compat
+    endereco = db.Column(db.Text)
+    # Verificação
+    status_verificacao = db.Column(db.String(20), default='pendente')
+    admin_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    admin = db.relationship('User', foreign_keys=[admin_id], backref='clinicas_gerenciadas')
+
+    def __repr__(self):
+        return f'<Clinica {self.nome}>'
+
+
+class ClinicaEspecialista(db.Model):
+    __tablename__ = 'clinica_especialistas'
+
+    id = db.Column(db.Integer, primary_key=True)
+    clinica_id = db.Column(db.Integer, db.ForeignKey('clinicas.id'), nullable=False)
+    especialista_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    clinica = db.relationship('Clinica', backref='membros')
+    especialista = db.relationship('User', foreign_keys=[especialista_id], backref='clinicas_vinculadas')
+
+    def __repr__(self):
+        return f'<ClinicaEspecialista clinica={self.clinica_id} esp={self.especialista_id}>'
+
+
 class Agenda(db.Model):
     __tablename__ = 'agendas'
 
