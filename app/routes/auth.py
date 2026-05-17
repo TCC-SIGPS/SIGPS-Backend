@@ -23,7 +23,8 @@ def register():
     novo_usuario = User(
         nome=dados.get('nome'),
         email=dados.get('email'),
-        perfil=dados.get('perfil', 'Paciente') 
+        perfil=dados.get('perfil', 'Paciente'),
+        genero=dados.get('genero')
     )
     
     # Transforma a senha em hash antes de salvar no banco
@@ -57,6 +58,8 @@ def login():
     access_token = create_access_token(identity=str(usuario.id))
     refresh_token = create_refresh_token(identity=str(usuario.id))
 
+    esp = usuario.especialista_info
+
     return jsonify({
         "token": access_token,
         "refresh_token": refresh_token,
@@ -65,12 +68,13 @@ def login():
             "nome": usuario.nome,
             "email": usuario.email,
             "perfil": usuario.perfil,
-            "especialidade": usuario.especialidade,
-            "crm": usuario.crm,
-            "foto": usuario.foto,
-            "sobre": usuario.sobre,
-            "uf": usuario.uf,
-            "localAtendimento": usuario.local_atendimento
+            "genero": usuario.genero,
+            "especialidade": esp.especialidade if esp else None,
+            "crm": esp.crm if esp else None,
+            "foto": esp.foto if esp else None,
+            "sobre": esp.sobre if esp else None,
+            "uf": esp.uf if esp else None,
+            "localAtendimento": esp.local_atendimento if esp else None
         }
     }), 200
 
@@ -84,16 +88,19 @@ def get_me():
     if not usuario:
         return jsonify({"message": "Usuário não encontrado"}), 404
 
+    esp = usuario.especialista_info
+
     return jsonify({
         "id": usuario.id,
         "nome": usuario.nome,
         "email": usuario.email,
         "perfil": usuario.perfil,
-        "especialidade": usuario.especialidade,
-        "crm": usuario.crm,
-        "foto": usuario.foto,
-        "sobre": usuario.sobre,
-        "uf": usuario.uf
+        "genero": usuario.genero,
+        "especialidade": esp.especialidade if esp else None,
+        "crm": esp.crm if esp else None,
+        "foto": esp.foto if esp else None,
+        "sobre": esp.sobre if esp else None,
+        "uf": esp.uf if esp else None
     }), 200
 
 # 4. RENOVA O TOKEN DE ACESSO (POST /api/v1/auth/refresh)[cite: 1]

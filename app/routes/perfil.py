@@ -2,7 +2,7 @@ import os, re
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
-from app.models import db, User, Clinica, ClinicaEspecialista
+from app.models import db, User, Especialista, Clinica, ClinicaEspecialista
 
 bp_perfil = Blueprint('perfil', __name__, url_prefix='/api/v1/perfil')
 
@@ -26,6 +26,8 @@ def _serializar_usuario(u):
     membro = ClinicaEspecialista.query.filter_by(especialista_id=u.id).first()
     clinica_membro = membro.clinica if membro else None
 
+    esp = u.especialista_info
+
     def _clinica_dict(c, com_membros=False):
         d = {
             "id": c.id,
@@ -47,8 +49,9 @@ def _serializar_usuario(u):
         if com_membros:
             d['especialistas'] = [
                 {"id": m.especialista_id, "nome": m.especialista.nome,
-                 "especialidade": m.especialista.especialidade or '', "crm": m.especialista.crm or '',
-                 "statusVerificacao": m.especialista.status_verificacao or 'nao_verificado'}
+                 "especialidade": m.especialista.especialista_info.especialidade if m.especialista.especialista_info else '', 
+                 "crm": m.especialista.especialista_info.crm if m.especialista.especialista_info else '',
+                 "statusVerificacao": m.especialista.especialista_info.status_verificacao if m.especialista.especialista_info else 'nao_verificado'}
                 for m in c.membros
             ]
         return d
@@ -58,17 +61,18 @@ def _serializar_usuario(u):
         "nome": u.nome,
         "email": u.email,
         "perfil": u.perfil,
-        "tipoProfissional": u.tipo_profissional,
-        "especialidade": u.especialidade,
-        "conselho": u.conselho_tipo,
-        "numeroRegistro": u.numero_registro,
-        "uf": u.uf,
-        "crm": u.crm,
-        "foto": u.foto,
-        "sobre": u.sobre,
-        "localAtendimento": u.local_atendimento,
-        "statusVerificacao": u.status_verificacao or 'nao_verificado',
-        "documentoEnviado": bool(u.documento_verificacao),
+        "genero": u.genero,
+        "tipoProfissional": esp.tipo_profissional if esp else None,
+        "especialidade": esp.especialidade if esp else None,
+        "conselho": esp.conselho_tipo if esp else None,
+        "numeroRegistro": esp.numero_registro if esp else None,
+        "uf": esp.uf if esp else None,
+        "crm": esp.crm if esp else None,
+        "foto": esp.foto if esp else None,
+        "sobre": esp.sobre if esp else None,
+        "localAtendimento": esp.local_atendimento if esp else None,
+        "statusVerificacao": esp.status_verificacao if esp else 'nao_verificado',
+        "documentoEnviado": bool(esp.documento_verificacao if esp else False),
         "clinicaAdmin": _clinica_dict(clinica_admin, com_membros=True) if clinica_admin else None,
         "clinicaVinculada": _clinica_dict(clinica_membro) if clinica_membro else None
     }
@@ -89,19 +93,25 @@ def atualizar_perfil():
     u = User.query.get_or_404(user_id)
     dados = request.get_json()
 
-    campos = {
-        'nome': 'nome', 'especialidade': 'especialidade',
-        'tipoProfissional': 'tipo_profissional', 'conselho': 'conselho_tipo',
-        'numeroRegistro': 'numero_registro', 'uf': 'uf',
-        'foto': 'foto', 'sobre': 'sobre', 'localAtendimento': 'local_atendimento'
-    }
-    for campo_json, campo_db in campos.items():
+    campos_usuario = {'nome': 'nome', 'genero': 'genero'}
+    for campo_json, campo_db in campos_usuario.items():
         if campo_json in dados and dados[campo_json] is not None:
             setattr(u, campo_db, dados[campo_json])
 
-    # Atualiza campo legado crm
-    if u.conselho_tipo and u.numero_registro and u.uf:
-        u.crm = _registro_completo(u.conselho_tipo, u.numero_registro, u.uf)
+    # Se tiver perfil de especialista, atualiza campos do especialista
+    if u.perfil == 'Especialista' and u.especialista_info:
+        campos_esp = {
+            'especialidade': 'especialidade',
+            'tipoProfissional': 'tipo_profissional', 'conselho': 'conselho_tipo',
+            'numeroRegistro': 'numero_registro', 'uf': 'uf',
+            'foto': 'foto', 'sobre': 'sobre', 'localAtendimento': 'local_atendimento'
+        }
+        for campo_json, campo_db in campos_esp.items():
+            if campo_json in dados and dados[campo_json] is not None:
+                setattr(u.especialista_info, campo_db, dados[campo_json])
+        
+        if u.especialista_info.conselho_tipo and u.especialista_info.numero_registro and u.especialista_info.uf:
+            u.especialista_info.crm = _registro_completo(u.especialista_info.conselho_tipo, u.especialista_info.numero_registro, u.especialista_info.uf)
 
     db.session.commit()
     return jsonify({"message": "Perfil atualizado", "perfil": _serializar_usuario(u)}), 200
@@ -124,15 +134,22 @@ def tornar_especialista():
         return jsonify({"message": "Tipo, conselho, número, UF e especialidade são obrigatórios"}), 400
 
     u.perfil = 'Especialista'
-    u.tipo_profissional = tipo
-    u.conselho_tipo = conselho
-    u.numero_registro = numero
-    u.uf = uf
-    u.especialidade = especialidade
-    u.crm = _registro_completo(conselho, numero, uf)
-    u.sobre = dados.get('sobre', '')
-    u.local_atendimento = dados.get('localAtendimento', '')
-    u.status_verificacao = 'nao_verificado'
+    
+    if not u.especialista_info:
+        esp = Especialista(user_id=u.id)
+        db.session.add(esp)
+    else:
+        esp = u.especialista_info
+
+    esp.tipo_profissional = tipo
+    esp.conselho_tipo = conselho
+    esp.numero_registro = numero
+    esp.uf = uf
+    esp.especialidade = especialidade
+    esp.crm = _registro_completo(conselho, numero, uf)
+    esp.sobre = dados.get('sobre', '')
+    esp.local_atendimento = dados.get('localAtendimento', '')
+    esp.status_verificacao = 'nao_verificado'
 
     db.session.commit()
     return jsonify({"message": "Perfil profissional criado!", "perfil": _serializar_usuario(u)}), 200
@@ -157,8 +174,11 @@ def enviar_documento():
     caminho = os.path.join(UPLOAD_FOLDER, nome_seguro)
     arquivo.save(caminho)
 
-    u.documento_verificacao = caminho
-    u.status_verificacao = 'em_analise'
+    if not u.especialista_info:
+        return jsonify({"message": "Perfil de especialista não encontrado"}), 400
+
+    u.especialista_info.documento_verificacao = caminho
+    u.especialista_info.status_verificacao = 'em_analise'
     db.session.commit()
 
     return jsonify({"message": "Documento enviado. Aguarde análise em até 2 dias úteis.", "status": "em_analise"}), 200
@@ -180,6 +200,9 @@ def atualizar_verificacao(user_id):
     if novo_status not in STATUS_VERIFICACAO:
         return jsonify({"message": f"Status inválido. Use: {STATUS_VERIFICACAO}"}), 400
 
-    u.status_verificacao = novo_status
+    if not u.especialista_info:
+        return jsonify({"message": "O usuário não é especialista"}), 400
+
+    u.especialista_info.status_verificacao = novo_status
     db.session.commit()
     return jsonify({"message": f"Status atualizado para {novo_status}"}), 200

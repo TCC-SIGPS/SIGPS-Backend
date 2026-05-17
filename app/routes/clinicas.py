@@ -51,9 +51,9 @@ def _serializar_clinica(c, com_membros=False):
             {
                 "id": m.especialista_id,
                 "nome": m.especialista.nome,
-                "especialidade": m.especialista.especialidade or '',
-                "crm": m.especialista.crm or '',
-                "statusVerificacao": m.especialista.status_verificacao or 'nao_verificado'
+                "especialidade": m.especialista.especialista_info.especialidade if m.especialista.especialista_info else '',
+                "crm": m.especialista.especialista_info.crm if m.especialista.especialista_info else '',
+                "statusVerificacao": m.especialista.especialista_info.status_verificacao if m.especialista.especialista_info else 'nao_verificado'
             }
             for m in c.membros
         ]
@@ -109,8 +109,8 @@ def criar_clinica():
     db.session.add(nova)
 
     admin = User.query.get(user_id)
-    if admin.perfil == 'Especialista' and not admin.local_atendimento:
-        admin.local_atendimento = nova.endereco
+    if admin.perfil == 'Especialista' and admin.especialista_info and not admin.especialista_info.local_atendimento:
+        admin.especialista_info.local_atendimento = nova.endereco
 
     db.session.commit()
     return jsonify(_serializar_clinica(nova, True)), 201
@@ -159,7 +159,8 @@ def atualizar_clinica(id):
 
     # Propaga o novo endereço para todos os especialistas vinculados
     for membro in c.membros:
-        membro.especialista.local_atendimento = novo_endereco
+        if membro.especialista.especialista_info:
+            membro.especialista.especialista_info.local_atendimento = novo_endereco
 
     db.session.commit()
     return jsonify(_serializar_clinica(c, True)), 200
@@ -189,7 +190,10 @@ def adicionar_especialista(id):
 
     vinculo = ClinicaEspecialista(clinica_id=id, especialista_id=especialista.id)
     db.session.add(vinculo)
-    especialista.local_atendimento = c.endereco or _endereco_formatado(c)
+    
+    if especialista.especialista_info:
+        especialista.especialista_info.local_atendimento = c.endereco or _endereco_formatado(c)
+        
     db.session.commit()
 
     return jsonify({

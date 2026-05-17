@@ -14,15 +14,16 @@ def _foto_padrao(nome):
 
 
 def _serializar_especialista(u, com_agenda=False):
+    esp = u.especialista_info
     data = {
         "id": u.id,
         "nome": u.nome,
-        "especialidade": u.especialidade or 'Clínico Geral',
-        "crm": u.crm or '',
-        "foto": u.foto or _foto_padrao(u.nome),
-        "sobre": u.sobre or '',
-        "uf": u.uf or '',
-        "localAtendimento": u.local_atendimento or '',
+        "especialidade": esp.especialidade if esp else 'Clínico Geral',
+        "crm": esp.crm if esp else '',
+        "foto": esp.foto if esp else _foto_padrao(u.nome),
+        "sobre": esp.sobre if esp else '',
+        "uf": esp.uf if esp else '',
+        "localAtendimento": esp.local_atendimento if esp else '',
         "situacao": "Ativo",
         "avaliacao": 5.0,
         "avaliacoesCount": 0,
@@ -92,9 +93,12 @@ def atualizar_perfil():
     user_id = int(get_jwt_identity())
     u = User.query.get_or_404(user_id)
     dados = request.get_json()
+    if not u.especialista_info:
+        return jsonify({"message": "Perfil de especialista não encontrado"}), 400
+
     campos = ['especialidade', 'crm', 'foto', 'sobre', 'uf', 'local_atendimento']
     for campo in campos:
         if campo in dados:
-            setattr(u, campo, dados[campo])
+            setattr(u.especialista_info, campo, dados[campo])
     db.session.commit()
     return jsonify({"message": "Perfil atualizado", "especialista": _serializar_especialista(u)}), 200
