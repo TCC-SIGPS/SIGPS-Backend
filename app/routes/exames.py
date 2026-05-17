@@ -40,6 +40,16 @@ def upload_exame():
         db.session.add(novo_exame)
         db.session.commit()
 
+        # Registrar notificação para o paciente
+        from app.models import Notification
+        paciente_obj = Paciente.query.get(paciente_id)
+        if paciente_obj:
+            Notification.create(
+                user_id=paciente_obj.user_id,
+                message=f"Seu Exame '{novo_exame.nome_exame}' está Disponível",
+                route="/painel/exames"
+            )
+
         return jsonify({"message": "Exame enviado com sucesso!", "caminho": filename}), 201
 
     return jsonify({"message": "Dados incompletos"}), 400

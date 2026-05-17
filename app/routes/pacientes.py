@@ -66,10 +66,21 @@ def completar_cadastro():
     try:
         data_nasc = datetime.strptime(dados.get('data_nascimento'), '%Y-%m-%d').date()
 
+        user = User.query.get(usuario_id)
+        genero_user = user.genero if user else 'Masculino'
+        genero_upper = (genero_user or 'M').upper()
+        if 'MASC' in genero_upper or genero_upper.startswith('M'):
+            genero_db = 'M'
+        elif 'FEM' in genero_upper or genero_upper.startswith('F'):
+            genero_db = 'F'
+        else:
+            genero_db = 'M'
+
         novo_paciente = Paciente(
             user_id=usuario_id,
             cpf=dados.get('cpf'),
             data_nascimento=data_nasc,
+            genero=genero_db,
             telefone=dados.get('telefone'),
             tipo_sanguineo=dados.get('tipo_sanguineo'),
             alergias=dados.get('alergias'),

@@ -177,3 +177,49 @@ class Consulta(db.Model):
 
     agenda = db.relationship('Agenda', backref='consultas')
     paciente = db.relationship('User', foreign_keys=[paciente_id])
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    message = db.Column(db.String(255), nullable=False)
+    read = db.Column(db.Boolean, default=False)
+    route = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    user = db.relationship('User', backref=db.backref('notifications_list', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_dict(self):
+        # Format time beautifully for the frontend
+        # E.g. "Há 2h", "Hoje", "Ontem" or just "DD/MM/YYYY HH:MM"
+        time_str = "Agora"
+        if self.created_at:
+            import datetime
+            diff = datetime.datetime.now() - self.created_at
+            if diff.days == 0:
+                if diff.seconds < 60:
+                    time_str = "Agora"
+                elif diff.seconds < 3600:
+                    time_str = f"Há {diff.seconds // 60}m"
+                else:
+                    time_str = f"Há {diff.seconds // 3600}h"
+            elif diff.days == 1:
+                time_str = "Ontem"
+            else:
+                time_str = self.created_at.strftime('%d/%m/%Y')
+
+        return {
+            "id": self.id,
+            "message": self.message,
+            "read": self.read,
+            "route": self.route,
+            "time": time_str
+        }
+
+    @staticmethod
+    def create(user_id, message, route=None):
+        notif = Notification(user_id=user_id, message=message, route=route)
+        db.session.add(notif)
+        db.session.commit()
+        return notif

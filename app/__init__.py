@@ -46,6 +46,8 @@ def register_blueprints(app):
     from app.routes.specialists import bp_specialists as specialists_blueprint
     from app.routes.clinicas import bp_clinicas as clinicas_blueprint
     from app.routes.perfil import bp_perfil as perfil_blueprint
+    from app.routes.dashboards import bp_dashboards as dashboards_blueprint
+    from app.routes.notifications import bp_notifications as notifications_blueprint
 
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(paciente_blueprint)
@@ -57,3 +59,5 @@ def register_blueprints(app):
     app.register_blueprint(specialists_blueprint)
     app.register_blueprint(clinicas_blueprint)
     app.register_blueprint(perfil_blueprint)
+    app.register_blueprint(dashboards_blueprint)
+    app.register_blueprint(notifications_blueprint)

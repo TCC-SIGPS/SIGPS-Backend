@@ -136,6 +136,26 @@ def agendar_consulta():
     
     # Refresh to ensure relationships like c.paciente are loaded before serialization
     db.session.refresh(nova_consulta)
+
+    # Registrar notificações em tempo real no banco de dados
+    from app.models import Notification
+    paciente_nome = nova_consulta.paciente.nome if nova_consulta.paciente else 'Paciente'
+    especialista_nome = agenda.especialista.nome if agenda.especialista else 'Especialista'
+    data_agenda = agenda.data.strftime('%d/%m/%Y')
+
+    # 1. Notificação para o Especialista
+    Notification.create(
+        user_id=agenda.especialista_id,
+        message=f"Novo agendamento: Paciente {paciente_nome} (Dia {data_agenda} às {horario}h)",
+        route="/painel/agendas"
+    )
+
+    # 2. Notificação para o Paciente
+    Notification.create(
+        user_id=user_id,
+        message=f"Consulta com {especialista_nome} confirmada",
+        route="/painel/agendas"
+    )
     
     return jsonify(_serializar_consulta(nova_consulta)), 201
 
@@ -164,4 +184,33 @@ def atualizar_status_consulta(id):
     mapa = {'Agendada': 'Agendada', 'Cancelada': 'Cancelada', 'Concluida': 'Concluída', 'Concluída': 'Concluída'}
     consulta.status = mapa.get(novo_status, novo_status)
     db.session.commit()
+
+    # Registrar notificações em tempo real de mudança de status
+    from app.models import Notification
+    paciente_nome = consulta.paciente.nome if consulta.paciente else 'Paciente'
+    especialista_nome = consulta.agenda.especialista.nome if consulta.agenda and consulta.agenda.especialista else 'Especialista'
+    data_agenda = consulta.agenda.data.strftime('%d/%m/%Y') if consulta.agenda and consulta.agenda.data else ''
+
+    if consulta.status == 'Concluída':
+        # Notificação para o Paciente
+        Notification.create(
+            user_id=consulta.paciente_id,
+            message=f"Sua consulta com {especialista_nome} foi concluída. O relatório clínico já está disponível.",
+            route="/painel/agendas"
+        )
+    elif consulta.status == 'Cancelada':
+        # 1. Notificação para o Paciente
+        Notification.create(
+            user_id=consulta.paciente_id,
+            message=f"Consulta com {especialista_nome} do dia {data_agenda} às {consulta.horario}h foi Cancelada.",
+            route="/painel/agendas"
+        )
+        # 2. Notificação para o Especialista
+        if consulta.agenda:
+            Notification.create(
+                user_id=consulta.agenda.especialista_id,
+                message=f"Consulta do Paciente {paciente_nome} do dia {data_agenda} às {consulta.horario}h foi Cancelada.",
+                route="/painel/agendas"
+            )
+
     return jsonify({"message": "Status atualizado", "consulta": _serializar_consulta(consulta)}), 200

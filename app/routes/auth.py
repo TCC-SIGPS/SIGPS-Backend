@@ -49,23 +49,33 @@ def register():
         novo_usuario = User(
             nome=dados.get('nome'),
             email=email,
-            perfil=dados.get('perfil', 'Paciente') 
+            perfil=dados.get('perfil', 'Paciente'),
+            genero=genero
         )
         novo_usuario.set_password(senha)
 
         db.session.add(novo_usuario)
         db.session.flush() # Gera o ID do usuário temporariamente para vincular o paciente
 
+        # Normaliza o gênero para 'M' ou 'F' (1 caractere) para a tabela de pacientes
+        genero_upper = (genero or 'M').upper()
+        if 'MASC' in genero_upper or genero_upper.startswith('M'):
+            genero_db = 'M'
+        elif 'FEM' in genero_upper or genero_upper.startswith('F'):
+            genero_db = 'F'
+        else:
+            genero_db = 'M'
+
         # Instancia o Paciente vinculado ao Usuário (Guarda Gênero e Idade para o ML)
         novo_paciente = Paciente(
             user_id=novo_usuario.id,
             cpf=cpf,
             data_nascimento=data_nascimento,
-            genero=genero.upper() # Salva 'M' ou 'F'
+            genero=genero_db
         )
         
         db.session.add(novo_paciente)
-        db.session.commit() # Salva tudo definitivamente no SQLite
+        db.session.commit() # Salva tudo definitivamente no SQLite/MySQL
         
         return jsonify({
             "message": "Usuário e dados de Paciente cadastrados com sucesso!",
