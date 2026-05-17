@@ -12,20 +12,10 @@ class User(db.Model):
     senha = db.Column(db.String(255), nullable=False)
     # Perfis: Paciente, Visualizador, Gestor, Especialista, Admin
     perfil = db.Column(db.String(20), default='Paciente', nullable=False)
+    genero = db.Column(db.String(20), nullable=True)
 
-    # Campos adicionais para Especialistas
-    especialidade = db.Column(db.String(100), nullable=True)
-    tipo_profissional = db.Column(db.String(50), nullable=True)   # Médico, Dentista, Enfermeiro...
-    conselho_tipo = db.Column(db.String(10), nullable=True)       # CRM, CRO, COREN, CRP...
-    numero_registro = db.Column(db.String(30), nullable=True)     # Número sem UF
-    crm = db.Column(db.String(30), nullable=True)                 # Mantido por compat. (conselho_tipo + numero)
-    foto = db.Column(db.String(500), nullable=True)
-    sobre = db.Column(db.Text, nullable=True)
-    uf = db.Column(db.String(2), nullable=True)
-    local_atendimento = db.Column(db.String(300), nullable=True)
-    # Verificação profissional
-    status_verificacao = db.Column(db.String(20), default='nao_verificado', nullable=True)
-    documento_verificacao = db.Column(db.String(500), nullable=True)
+    # Campos adicionais para Especialistas foram movidos para a tabela Especialista
+
 
     def set_password(self, password):
         self.senha = generate_password_hash(password)
@@ -52,6 +42,29 @@ class Paciente(db.Model):
 
     def __repr__(self):
         return f'<Paciente {self.cpf}>'
+
+class Especialista(db.Model):
+    __tablename__ = 'especialistas'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
+    
+    especialidade = db.Column(db.String(100), nullable=True)
+    tipo_profissional = db.Column(db.String(50), nullable=True)   # Médico, Dentista, Enfermeiro...
+    conselho_tipo = db.Column(db.String(10), nullable=True)       # CRM, CRO, COREN, CRP...
+    numero_registro = db.Column(db.String(30), nullable=True)     # Número sem UF
+    crm = db.Column(db.String(30), nullable=True)                 # Mantido por compatibilidade
+    foto = db.Column(db.String(500), nullable=True)
+    sobre = db.Column(db.Text, nullable=True)
+    uf = db.Column(db.String(2), nullable=True)
+    local_atendimento = db.Column(db.String(300), nullable=True)
+    status_verificacao = db.Column(db.String(20), default='nao_verificado', nullable=True)
+    documento_verificacao = db.Column(db.String(500), nullable=True)
+
+    usuario = db.relationship('User', backref=db.backref('especialista_info', uselist=False))
+
+    def __repr__(self):
+        return f'<Especialista {self.user_id}>'
 
 class FilaAtendimento(db.Model):
     __tablename__ = 'fila_atendimento'

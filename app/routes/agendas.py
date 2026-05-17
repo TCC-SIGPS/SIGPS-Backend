@@ -8,11 +8,14 @@ bp_agendas = Blueprint('agendas', __name__, url_prefix='/api/v1/schedules')
 
 def _serializar_agenda(a):
     horarios = [h for h in a.horarios_disponiveis.split(',') if h] if a.horarios_disponiveis else []
+    
+    esp_info = a.especialista.especialista_info if a.especialista else None
+    
     return {
         "id": a.id,
         "especialistaId": a.especialista_id,
         "especialista": a.especialista.nome,
-        "especialidade": a.especialista.especialidade or 'Clínico Geral',
+        "especialidade": esp_info.especialidade if esp_info else 'Clínico Geral',
         "data": a.data.strftime('%d/%m/%Y'),
         "horarios": horarios,
         "vagas": len(horarios)
@@ -20,18 +23,30 @@ def _serializar_agenda(a):
 
 
 def _serializar_consulta(c):
+    # Garante que os relacionamentos estão acessíveis
+    paciente_nome = c.paciente.nome if c.paciente else 'Paciente Desconhecido'
+    
+    # Previne erros caso a agenda ou especialista tenham sido deletados
+    especialista_nome = c.agenda.especialista.nome if c.agenda and c.agenda.especialista else 'Especialista Desconhecido'
+    
+    esp_info = c.agenda.especialista.especialista_info if c.agenda and c.agenda.especialista else None
+    especialidade = esp_info.especialidade if esp_info else 'Clínico Geral'
+    local_atend = esp_info.local_atendimento if esp_info else ''
+    
+    data_agenda = c.agenda.data.strftime('%d/%m/%Y') if c.agenda and c.agenda.data else ''
+
     return {
         "id": c.id,
         "pacienteId": c.paciente_id,
-        "pacienteNome": c.paciente.nome,
-        "especialista": c.agenda.especialista.nome,
-        "especialidade": c.agenda.especialista.especialidade or 'Clínico Geral',
-        "data": c.agenda.data.strftime('%d/%m/%Y'),
+        "pacienteNome": paciente_nome,
+        "especialista": especialista_nome,
+        "especialidade": especialidade,
+        "data": data_agenda,
         "horario": c.horario,
-        "local": c.agenda.especialista.local_atendimento or '',
+        "local": local_atend,
         "instrucoes": "",
         "recomendacoes": "",
-        "status": c.status.lower().replace('í', 'i')  # normaliza para minúsculas
+        "status": c.status.lower().replace('í', 'i') if c.status else 'agendada'
     }
 
 
@@ -66,6 +81,9 @@ def criar_agenda():
     )
     db.session.add(nova_agenda)
     db.session.commit()
+    
+    # Refresh to ensure relationships are loaded and valid
+    db.session.refresh(nova_agenda)
     return jsonify(_serializar_agenda(nova_agenda)), 201
 
 
@@ -115,6 +133,10 @@ def agendar_consulta():
             agenda.horarios_disponiveis = ",".join(horarios)
 
     db.session.commit()
+    
+    # Refresh to ensure relationships like c.paciente are loaded before serialization
+    db.session.refresh(nova_consulta)
+    
     return jsonify(_serializar_consulta(nova_consulta)), 201
 
 
