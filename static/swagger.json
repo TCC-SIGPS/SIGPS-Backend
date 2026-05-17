@@ -20,8 +20,8 @@
     "/api/v1/auth/register": {
       "post": {
         "tags": ["Autenticação"],
-        "summary": "CADASTRO DE NOVOS USUÁRIOS",
-        "description": "Rota para criar novos usuários. O campo 'perfil' define o nível de acesso.",
+        "summary": "CADASTRO DE NOVOS USUÁRIOS E PACIENTES",
+        "description": "Rota para criar novos usuários de saúde. Cria o perfil base e vincula os dados necessários para o motor de Machine Learning (Idade, Gênero).",
         "parameters": [
           {
             "in": "body",
@@ -33,14 +33,19 @@
                 "nome": { "type": "string", "example": "Felipe Silva" },
                 "email": { "type": "string", "example": "felipe@email.com" },
                 "password": { "type": "string", "example": "123456@" },
-                "perfil": { "type": "string", "example": "Paciente" }
-              }
+                "perfil": { "type": "string", "example": "Paciente" },
+                "cpf": { "type": "string", "example": "123.456.789-00" },
+                "genero": { "type": "string", "example": "M" },
+                "data_nascimento": { "type": "string", "example": "17/05/1995" }
+              },
+              "required": ["nome", "email", "password", "cpf", "genero", "data_nascimento"]
             }
           }
         ],
         "responses": {
-          "201": { "description": "Usuário cadastrado com sucesso!" },
-          "400": { "description": "E-mail já cadastrado" }
+          "201": { "description": "Usuário e dados de Paciente cadastrados com sucesso!" },
+          "400": { "description": "E-mail ou CPF já cadastrado ou dados inválidos" },
+          "500": { "description": "Erro interno no servidor ao processar banco de dados" }
         }
       }
     },
@@ -140,4 +145,4 @@
       }
     }
   }
-} 
+}

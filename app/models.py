@@ -41,6 +41,7 @@ class Paciente(db.Model):
     
     cpf = db.Column(db.String(14), unique=True, nullable=False)
     data_nascimento = db.Column(db.Date, nullable=False)
+    genero = db.Column(db.String(1), nullable=False) # <--- ADICIONADO AQUI PARA A IA
     telefone = db.Column(db.String(20))
     
     tipo_sanguineo = db.Column(db.String(3))
@@ -61,10 +62,10 @@ class FilaAtendimento(db.Model):
     # Níveis de prioridade (ex: 1: Verde, 2: Amarelo, 3: Vermelho)
     prioridade = db.Column(db.Integer, default=1)
     
-    # Score de IA (0 a 100) exigido pelo Guia Técnico[cite: 1]
+    # Score de IA (0 a 100) exigido pelo Guia Técnico
     score = db.Column(db.Integer, default=0)
     
-    # Status: Aguardando, Em Atendimento, Finalizado[cite: 1]
+    # Status: Aguardando, Em Atendimento, Finalizado
     status = db.Column(db.String(20), default='Aguardando')
     
     data_chegada = db.Column(db.DateTime, default=db.func.current_timestamp())
@@ -74,7 +75,6 @@ class FilaAtendimento(db.Model):
     def __repr__(self):
         return f'<Fila ID {self.id} - Paciente {self.paciente_id}>'
 
-# --- NOVO MODELO PARA EXAMES ---
 class Exame(db.Model):
     __tablename__ = 'exames'
 
@@ -82,7 +82,6 @@ class Exame(db.Model):
     paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False)
     
     nome_exame = db.Column(db.String(100), nullable=False)
-    # Caminho onde o PDF/Imagem será salvo no servidor[cite: 1]
     arquivo_path = db.Column(db.String(255), nullable=False)
     data_upload = db.Column(db.DateTime, default=db.func.current_timestamp())
 
@@ -91,13 +90,12 @@ class Exame(db.Model):
     def __repr__(self):
         return f'<Exame {self.nome_exame} - Paciente {self.paciente_id}>'
 
-# --- NOVO MODELO PARA CHAT ---
 class ChatMessage(db.Model):
     __tablename__ = 'chat_messages'
 
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True) # Pode ser null se for broadcast/sistema
+    receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     text = db.Column(db.Text, nullable=False)
     read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
@@ -105,17 +103,15 @@ class ChatMessage(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id])
     receiver = db.relationship('User', foreign_keys=[receiver_id])
 
-# --- NOVO MODELO PARA AGENDA ---
 class Clinica(db.Model):
     __tablename__ = 'clinicas'
 
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(200), nullable=False)
-    tipo = db.Column(db.String(50), default='Clínica')           # Clínica, Consultório, Hospital, UBS...
+    tipo = db.Column(db.String(50), default='Clínica')
     cnpj = db.Column(db.String(18), unique=True)
     telefone = db.Column(db.String(20))
     email_contato = db.Column(db.String(100))
-    # Endereço estruturado
     cep = db.Column(db.String(9))
     rua = db.Column(db.String(200))
     numero = db.Column(db.String(10))
@@ -123,9 +119,7 @@ class Clinica(db.Model):
     bairro = db.Column(db.String(100))
     cidade = db.Column(db.String(100))
     estado = db.Column(db.String(2))
-    # Campo legado mantido para compat
     endereco = db.Column(db.Text)
-    # Verificação
     status_verificacao = db.Column(db.String(20), default='pendente')
     admin_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
@@ -135,9 +129,8 @@ class Clinica(db.Model):
     def __repr__(self):
         return f'<Clinica {self.nome}>'
 
-
 class ClinicaEspecialista(db.Model):
-    __tablename__ = 'clinica_especialistas'
+    __tablename__ = 'clinica_specialistas'
 
     id = db.Column(db.Integer, primary_key=True)
     clinica_id = db.Column(db.Integer, db.ForeignKey('clinicas.id'), nullable=False)
@@ -149,14 +142,13 @@ class ClinicaEspecialista(db.Model):
     def __repr__(self):
         return f'<ClinicaEspecialista clinica={self.clinica_id} esp={self.especialista_id}>'
 
-
 class Agenda(db.Model):
     __tablename__ = 'agendas'
 
     id = db.Column(db.Integer, primary_key=True)
     especialista_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     data = db.Column(db.Date, nullable=False)
-    horarios_disponiveis = db.Column(db.String(255)) # Ex: "08:00,09:00,10:00"
+    horarios_disponiveis = db.Column(db.String(255))
 
     especialista = db.relationship('User', foreign_keys=[especialista_id])
 
@@ -167,7 +159,7 @@ class Consulta(db.Model):
     agenda_id = db.Column(db.Integer, db.ForeignKey('agendas.id'), nullable=False)
     paciente_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     horario = db.Column(db.String(5), nullable=False)
-    status = db.Column(db.String(20), default='Agendada') # Agendada, Cancelada, Concluída
+    status = db.Column(db.String(20), default='Agendada')
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
     agenda = db.relationship('Agenda', backref='consultas')
